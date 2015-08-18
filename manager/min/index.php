@@ -40,7 +40,10 @@ define('MINIFY_MIN_DIR', dirname(__FILE__));
 $min_allowDebugFlag = (boolean)$modx->getOption('manager_js_cache_allow_debug_flag',null,true);
 $min_errorLogger = (boolean)$modx->getOption('manager_js_cache_debug',null,true);
 $min_enableBuilder = false;
-$min_cachePath = $modx->cacheManager->getCachePath() . 'mgr/min/';
+$min_cachePath = $modx->cacheManager->getCachePath() . 'mgr/min';
+if (!is_dir($min_cachePath)) {
+    $modx->cacheManager->writeTree($min_cachePath);
+}
 $documentRoot = $modx->getOption('manager_js_document_root', null, '');
 $min_documentRoot = !empty($documentRoot) ? $documentRoot : $_SERVER['DOCUMENT_ROOT'];
 if (!empty($min_documentRoot)) {
@@ -55,12 +58,12 @@ $min_serveOptions['minApp']['maxFiles'] = (int)$modx->getOption('manager_js_cach
 $min_serveOptions['minApp']['allowDirs'][] = $min_documentRoot;
 $min_serveOptions['minifierOptions']['text/css']['virtualDirs'] = array();
 $min_symlinks = array();
-$hasVirtualManagerURL = empty($min_documentRoot) || strpos(MODX_MANAGER_PATH, $min_documentRoot) !== 0 || strpos(MODX_MANAGER_PATH, MODX_MANAGER_URL) === false || substr(MODX_MANAGER_PATH, 0, strpos(MODX_MANAGER_PATH, MODX_MANAGER_URL)) !== $min_documentRoot;
+$hasVirtualManagerURL = empty($min_documentRoot) || strpos(MODX_MANAGER_PATH, $min_documentRoot) !== 0 || strpos(MODX_MANAGER_PATH, MODX_MANAGER_URL) === false || substr(MODX_MANAGER_PATH, 0, strrpos(MODX_MANAGER_PATH, MODX_MANAGER_URL)) !== $min_documentRoot;
 if ($hasVirtualManagerURL) {
     $min_serveOptions['minApp']['allowDirs'][] = MODX_MANAGER_PATH;
     $min_serveOptions['minApp']['virtualDirs'][MODX_MANAGER_URL] = MODX_MANAGER_PATH;
 }
-$hasVirtualAssetsURL = empty($min_documentRoot) || strpos(MODX_ASSETS_PATH, $min_documentRoot) !== 0 || strpos(MODX_ASSETS_PATH, MODX_ASSETS_URL) === false || substr(MODX_ASSETS_PATH, 0, strpos(MODX_ASSETS_PATH, MODX_ASSETS_URL)) !== $min_documentRoot;
+$hasVirtualAssetsURL = empty($min_documentRoot) || strpos(MODX_ASSETS_PATH, $min_documentRoot) !== 0 || strpos(MODX_ASSETS_PATH, MODX_ASSETS_URL) === false || substr(MODX_ASSETS_PATH, 0, strrpos(MODX_ASSETS_PATH, MODX_ASSETS_URL)) !== $min_documentRoot;
 if ($hasVirtualAssetsURL) {
     $min_serveOptions['minApp']['allowDirs'][] = MODX_ASSETS_PATH;
     $min_serveOptions['minApp']['virtualDirs'][MODX_ASSETS_URL] = MODX_ASSETS_PATH;

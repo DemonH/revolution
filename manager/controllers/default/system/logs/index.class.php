@@ -21,6 +21,10 @@ class SystemLogsManagerController extends modManagerController {
     public function loadCustomCssJs() {
         $this->addJavascript($this->modx->getOption('manager_url').'assets/modext/widgets/system/modx.grid.manager.log.js');
         $this->addJavascript($this->modx->getOption('manager_url').'assets/modext/sections/system/logs.js');
+        $this->addHtml("<script>
+            Ext.onReady(function() {
+                MODx.add('modx-page-manager-log');
+            });</script>");
     }
 
     /**
@@ -44,7 +48,7 @@ class SystemLogsManagerController extends modManagerController {
      * @return string
      */
     public function getTemplateFile() {
-        return 'system/logs/index.tpl';
+        return '';
     }
 
     /**

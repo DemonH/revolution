@@ -71,10 +71,8 @@ class modCacheManager extends xPDOCacheManager {
                             foreach ($matches as $match) {
                                 if (array_key_exists("{$match[1]}", $contextConfig)) {
                                     $matchValue= $contextConfig["{$match[1]}"];
-                                } else {
-                                    $matchValue= '';
+                                    $v= str_replace($match[0], $matchValue, $v);
                                 }
-                                $v= str_replace($match[0], $matchValue, $v);
                             }
                         }
                         $results['config'][$k]= $v;
@@ -85,18 +83,24 @@ class modCacheManager extends xPDOCacheManager {
 
                 /* generate the aliasMap and resourceMap */
                 $collResources = $obj->getResourceCacheMap();
-                $results['resourceMap']= array ();
-                $results['aliasMap']= array ();
+                $friendlyUrls = $this->getOption('friendly_urls', $contextConfig, false);
+                $cacheAliasMap = $this->getOption('cache_alias_map', $options, false);
+                if ($friendlyUrls && $cacheAliasMap) {
+                    $results['aliasMap']= array ();
+                }
                 if ($collResources) {
                     /** @var Object $r */
                     while ($r = $collResources->fetch(PDO::FETCH_OBJ)) {
-                        $results['resourceMap'][(string) $r->parent][] = (string) $r->id;
-                        if ($this->modx->getOption('friendly_urls', $contextConfig, false)) {
+                        if (!isset($results['resourceMap'][(integer) $r->parent])) {
+                            $results['resourceMap'][(integer) $r->parent] = array();
+                        }
+                        $results['resourceMap'][(integer) $r->parent][] = (integer) $r->id;
+                        if ($friendlyUrls && $cacheAliasMap) {
                             if (array_key_exists($r->uri, $results['aliasMap'])) {
                                 $this->modx->log(xPDO::LOG_LEVEL_ERROR, "Resource URI {$r->uri} already exists for resource id = {$results['aliasMap'][$r->uri]}; skipping duplicate resource URI for resource id = {$r->id}");
                                 continue;
                             }
-                            $results['aliasMap'][$r->uri]= $r->id;
+                            $results['aliasMap'][$r->uri]= (integer) $r->id;
                         }
                     }
                 }
@@ -106,7 +110,7 @@ class modCacheManager extends xPDOCacheManager {
                 $results['webLinkMap']= array();
                 if ($collWebLinks) {
                     while ($wl = $collWebLinks->fetch(PDO::FETCH_OBJ)) {
-                        $results['webLinkMap'][$wl->id] = $wl->content;
+                        $results['webLinkMap'][(integer) $wl->id] = $wl->content;
                     }
                 }
 
@@ -143,6 +147,8 @@ class modCacheManager extends xPDOCacheManager {
 
                 /* cache the Context ACL policies */
                 $results['policies'] = $obj->findPolicy($contextKey);
+            } else {
+                $results = false;
             }
         } else {
             $results = $this->getOption("{$key}_results", $options, array());
@@ -493,20 +499,11 @@ class modCacheManager extends xPDOCacheManager {
     public function generateScript(modScript &$objElement, $objContent= null, array $options= array()) {
         $results= false;
         if (is_object($objElement) && $objElement instanceof modScript) {
-            $scriptContent= $objElement->getContent(is_string($objContent) ? array('content' => $objContent) : array());
-            $scriptName= $objElement->getScriptName();
-
-            $content = "function {$scriptName}(\$scriptProperties= array()) {\n";
-            $content .= "global \$modx;\n";
-            $content .= "if (is_array(\$scriptProperties)) {\n";
-            $content .= "extract(\$scriptProperties, EXTR_SKIP);\n";
-            $content .= "}\n";
-            $content .= $scriptContent . "\n";
-            $content .= "}\n";
+            $results= $objElement->getContent(is_string($objContent) ? array('content' => $objContent) : array());
+            $results = rtrim($results, "\n") . "\nreturn;\n";
             if ($this->getOption('returnFunction', $options, false)) {
-                return $content;
+                return $results;
             }
-            $results = $content;
             if ($this->getOption('cache_scripts', $options, true)) {
                 $options[xPDO::OPT_CACHE_KEY] = $this->getOption('cache_scripts_key', $options, 'scripts');
                 $options[xPDO::OPT_CACHE_HANDLER] = $this->getOption('cache_scripts_handler', $options, $this->getOption(xPDO::OPT_CACHE_HANDLER, $options));
@@ -590,6 +587,12 @@ class modCacheManager extends xPDOCacheManager {
             }
             $cleared[] = $partKey;
         }
+        /* invoke OnCacheUpdate event */
+        $this->modx->invokeEvent('OnCacheUpdate', array(
+            'results' => $results,
+            'paths' => $providers,
+            'options' => array_values($providers),
+        ));
         return (array_search(false, $results, true) === false);
     }
 
@@ -604,18 +607,18 @@ class modCacheManager extends xPDOCacheManager {
         $publishingResults= array();
         /* publish and unpublish resources using pub_date and unpub_date checks */
         $tblResource= $this->modx->getTableName('modResource');
-        $timeNow= time() + $this->modx->getOption('server_offset_time', null, 0);
-        $publishingResults['published']= $this->modx->exec("UPDATE {$tblResource} SET published=1, publishedon=pub_date, pub_date=0 WHERE published = 0 AND pub_date IS NOT NULL AND pub_date < {$timeNow} AND pub_date > 0");
-        $publishingResults['unpublished']= $this->modx->exec("UPDATE $tblResource SET published=0, publishedon=0, pub_date=0, unpub_date=0 WHERE published = 1 AND unpub_date IS NOT NULL AND unpub_date < {$timeNow} AND unpub_date > 0");
+        $timeNow= time();
+        $publishingResults['published']= $this->modx->exec("UPDATE {$tblResource} SET published=1, publishedon=pub_date, pub_date=0 WHERE pub_date IS NOT NULL AND pub_date < {$timeNow} AND pub_date > 0");
+        $publishingResults['unpublished']= $this->modx->exec("UPDATE $tblResource SET published=0, publishedon=0, pub_date=0, unpub_date=0 WHERE unpub_date IS NOT NULL AND unpub_date < {$timeNow} AND unpub_date > 0");
 
         /* update publish time file */
         $timesArr= array ();
         $minpub= 0;
         $minunpub= 0;
-        $sql= "SELECT MIN(pub_date) FROM {$tblResource} WHERE pub_date > ?";
+        $sql= "SELECT MIN(pub_date) FROM {$tblResource} WHERE published = 0 AND pub_date > ?";
         $stmt= $this->modx->prepare($sql);
         if ($stmt) {
-            $stmt->bindValue(1, time());
+            $stmt->bindValue(1, 0);
             if ($stmt->execute()) {
                 foreach ($stmt->fetchAll(PDO::FETCH_NUM) as $value) {
                     $minpub= $value[0];
@@ -631,10 +634,10 @@ class modCacheManager extends xPDOCacheManager {
         }
         if ($minpub) $timesArr[]= $minpub;
 
-        $sql= "SELECT MIN(unpub_date) FROM {$tblResource} WHERE unpub_date > ?";
+        $sql= "SELECT MIN(unpub_date) FROM {$tblResource} WHERE published = 1 AND unpub_date > ?";
         $stmt= $this->modx->prepare($sql);
         if ($stmt) {
-            $stmt->bindValue(1, time());
+            $stmt->bindValue(1, 0);
             if ($stmt->execute()) {
                 foreach ($stmt->fetchAll(PDO::FETCH_NUM) as $value) {
                     $minunpub= $value[0];
@@ -663,6 +666,12 @@ class modCacheManager extends xPDOCacheManager {
         if (!$this->set('auto_publish', $nextevent, 0, $options)) {
             $this->modx->log(modX::LOG_LEVEL_ERROR, "Error caching time of next auto publishing event");
             $publishingResults['errors'][]= $this->modx->lexicon('cache_sitepublishing_file_error');
+        } else {
+            if ($publishingResults['published'] !== 0 || $publishingResults['unpublished'] !== 0) {
+                $this->modx->invokeEvent('OnResourceAutoPublish', array(
+                    'results' => $publishingResults
+                ));
+            }
         }
 
         return $publishingResults;

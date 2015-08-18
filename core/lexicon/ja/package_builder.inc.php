@@ -1,15 +1,13 @@
 <?php
 /**
- * Package Builder Japanese lexicon topic
+ * Package Builder English lexicon topic
  *
- * @language ja
+ * @language en
  * @package modx
  * @subpackage lexicon
- * @author honda http://kogus.org 2012-09-14
- * @author shimojo http://www.priqia.com/
  */
 $_lang['as_system_settings'] = 'システム設定';
-$_lang['as_context_settings'] = 'コンテキストの設定';
+$_lang['as_context_settings'] = 'コンテキスト設定';
 $_lang['as_lexicon_entries'] = 'レキシコン登録';
 $_lang['as_lexicon_topics'] = 'レキシコン';
 $_lang['build'] = 'ビルド';
@@ -19,26 +17,26 @@ $_lang['class_key_custom'] = 'カスタムクラス';
 $_lang['class_key_custom_desc'] = 'ここでは、上記のリストにないカスタムxPDOオブジェクトのクラス名を指定することができます。';
 $_lang['file'] = 'ファイル';
 $_lang['index'] = 'インデックス';
-$_lang['object'] = 'オブジェクト';
+$_lang['object'] = 'Object';
 $_lang['object_id'] = 'オブジェクトID';
-$_lang['object_id_desc'] = 'マップしたい正確なオブジェクトです(必須項目)';
+$_lang['object_id_desc'] = 'マップしたい正確なオブジェクトです（必須項目）';
 $_lang['package_autoselects'] = 'パッケージのオートインクルード';
-$_lang['package_autoselects_desc'] = 'パッケージのビルドで自動的に取り込みたいリソースを選択して下さい。付記 : コアからビルドする場合は、全てチェックしないことをお勧めします。';
+$_lang['package_autoselects_desc'] = 'パッケージのビルドで自動的に取り込みたいリソースを選択してください。付記 : コアからビルドする場合は、全てチェックしないことをお勧めします。';
 $_lang['package_build'] = 'パッケージをビルド';
 $_lang['package_build_desc'] = 'パッケージをビルドすることができます。一度ビルドすると、core/packages ディレクトリに保存されます。';
 $_lang['package_build_err'] = 'パッケージのビルド中にエラーが発生しました。';
 $_lang['package_build_xml'] = 'XMLからパッケージをビルド';
-$_lang['package_build_xml_desc'] = 'コンポーネントから有効なビルドXMLファイルを選択して下さい。';
+$_lang['package_build_xml_desc'] = 'コンポーネントから有効なビルドXMLファイルを選択してください。';
 $_lang['package_builder'] = 'パッケージビルダー';
 $_lang['package_built'] = 'パッケージはビルドされました。';
 $_lang['package_info'] = 'パッケージ情報';
 $_lang['package_info_desc'] = '最初に、名前やバージョンやリリース情報等のパッケージ情報を指定してください。';
 $_lang['package_method'] = 'パッケージング方法選択';
-$_lang['package_method_desc'] = '使用したいパッケージのビルド方法を選択して下さい。';
+$_lang['package_method_desc'] = '使用したいパッケージのビルド方法を選択してください。';
 $_lang['php_script'] = 'PHPスクリプト';
 $_lang['preserve_keys'] = 'プライマリキー';
 $_lang['preserve_keys_desc'] = '現在のDBにある値にプライマリキーを保存します。';
-$_lang['release'] = 'リリース';
+$_lang['release'] = 'リリース状態';
 $_lang['resolve_files'] = 'Resolve Files';
 $_lang['resolve_files_desc'] = 'When checked, this will resolve the files specified in the resolvers.';
 $_lang['resolve_php'] = 'Resolve PHP Scripts';

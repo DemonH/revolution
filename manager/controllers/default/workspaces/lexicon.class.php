@@ -25,6 +25,10 @@ class WorkspacesLexiconManagerController extends modManagerController {
         $this->addJavascript($mgrUrl.'assets/modext/workspace/lexicon/lexicon.grid.js');
         $this->addJavascript($mgrUrl.'assets/modext/workspace/lexicon/lexicon.panel.js');
         $this->addJavascript($mgrUrl.'assets/modext/workspace/lexicon/index.js');
+        $this->addHtml("<script>
+            Ext.onReady(function() {
+                MODx.add('modx-page-lexicon-management');
+            });</script>");
     }
 
     /**
@@ -48,7 +52,7 @@ class WorkspacesLexiconManagerController extends modManagerController {
      * @return string
      */
     public function getTemplateFile() {
-        return 'workspaces/lexicon/index.tpl';
+        return '';
     }
 
     /**

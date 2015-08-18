@@ -11,7 +11,9 @@ MODx.tree.UserGroup = function(config) {
     Ext.applyIf(config,{
         title: _('user_groups')
         ,id: 'modx-tree-usergroup'
-        ,url: MODx.config.connectors_url+'security/group.php'
+        ,url: MODx.config.connector_url
+        ,action: 'security/group/getnodes'
+        ,sortAction: 'security/group/sort'
         ,root_id: 'n_ug_0'
         ,root_name: _('user_groups')
         ,enableDrag: true
@@ -21,15 +23,30 @@ MODx.tree.UserGroup = function(config) {
         ,useDefaultToolbar: true
         ,tbar: [{
             text: _('user_group_new')
+            ,cls: 'primary-button'
             ,scope: this
             ,handler: this.createUserGroup.createDelegate(this,[true],true)
         }]
     });
     MODx.tree.UserGroup.superclass.constructor.call(this,config);
 };
-Ext.extend(MODx.tree.UserGroup,MODx.tree.Tree,{	
+Ext.extend(MODx.tree.UserGroup,MODx.tree.Tree,{
     windows: {}
-	
+
+    /**
+     * Handles tree clicks
+     * @param {Object} n The node clicked
+     * @param {Object} e The event object
+     */
+    ,_handleClick: function (n,e) {
+        e.stopEvent();
+        e.preventDefault();
+        
+        if (this.disableHref) {return true;}
+        if (e.ctrlKey) {return true;}
+        return true;
+    }
+    
     ,addUser: function(item,e) {
         var n = this.cm.activeNode;
         var ug = n.id.substr(2).split('_');ug = ug[1];
@@ -39,16 +56,17 @@ Ext.extend(MODx.tree.UserGroup,MODx.tree.Tree,{
         if (!this.windows.adduser) {
             this.windows.adduser = MODx.load({
                 xtype: 'modx-window-usergroup-adduser'
-                ,record: r
                 ,listeners: {
                     'success': {fn:this.refresh,scope:this}
                 }
             });
+        } else {
+            this.windows.adduser.reset();
         }
         this.windows.adduser.setValues(r);
         this.windows.adduser.show(e.target);
     }
-	
+
     ,createUserGroup: function(item,e,tbar) {
         tbar = tbar || false;
         var p;
@@ -63,22 +81,22 @@ Ext.extend(MODx.tree.UserGroup,MODx.tree.Tree,{
         if (!this.windows.createUsergroup) {
             this.windows.createUsergroup = MODx.load({
                 xtype: 'modx-window-usergroup-create'
-                ,record: r
                 ,listeners: {
                     'success': {fn:this.refresh,scope:this}
                 }
             });
         } else {
-            this.windows.createUsergroup.setValues(r);
+            this.windows.createUsergroup.reset();
         }
+        this.windows.createUsergroup.fp.form.setValues(r);
         this.windows.createUsergroup.show(e.target);
     }
-    
+
     ,updateUserGroup: function(item,e) {
         var n = this.cm.activeNode;
         var id = n.id.substr(2).split('_');id = id[1];
-        
-        location.href = 'index.php?a=security/usergroup/update&id=' + id;
+
+        MODx.loadPage('security/usergroup/update', 'id=' + id);
     }
 
     ,getMenu: function() {
@@ -88,26 +106,26 @@ Ext.extend(MODx.tree.UserGroup,MODx.tree.Tree,{
 
         switch (n.attributes.type) {
             case 'usergroup':
-                if (ui.hasClass('padduser')) {
+                if (MODx.perm.usergroup_user_edit && ui.hasClass('padduser')) {
                     m.push({
                         text: _('user_group_user_add')
                         ,handler: this.addUser
                     });
                     m.push('-');
                 }
-                if (ui.hasClass('pcreate')) {
+                if (MODx.perm.usergroup_new && ui.hasClass('pcreate')) {
                     m.push({
                         text: _('user_group_create')
                         ,handler: this.createUserGroup
                     });
                 }
-                if (ui.hasClass('pupdate')) {
+                if (MODx.perm.usergroup_edit && ui.hasClass('pupdate')) {
                     m.push({
                         text: _('user_group_update')
                         ,handler: this.updateUserGroup
                     });
                 }
-                if (ui.hasClass('premove')) {
+                if (MODx.perm.usergroup_delete && ui.hasClass('premove')) {
                     m.push('-');
                     m.push({
                         text: _('user_group_remove')
@@ -116,16 +134,12 @@ Ext.extend(MODx.tree.UserGroup,MODx.tree.Tree,{
                 }
                 break;
             case 'user':
-                m.push({
-                    text: _('user_group_user_remove')
-                    ,handler: this.removeUser
-                })
                 break;
         }
 
         return m;
     }
-	
+
     ,removeUserGroup: function(item,e) {
         var n = this.cm.activeNode;
         var id = n.id.substr(2).split('_');id = id[1];
@@ -135,7 +149,7 @@ Ext.extend(MODx.tree.UserGroup,MODx.tree.Tree,{
             ,text: _('user_group_remove_confirm')
             ,url: this.config.url
             ,params: {
-                action: 'remove'
+                action: 'security/group/remove'
                 ,id: id
             }
             ,listeners: {
@@ -154,7 +168,7 @@ Ext.extend(MODx.tree.UserGroup,MODx.tree.Tree,{
             ,text: _('user_group_user_remove_confirm')
             ,url: this.config.url
             ,params: {
-                action: 'removeUser'
+                action: 'security/group/removeUser'
                 ,user_id: user_id
                 ,group_id: group_id
             }
@@ -187,11 +201,11 @@ MODx.window.CreateUserGroup = function(config) {
     Ext.applyIf(config,{
         title: _('create_user_group')
         ,id: this.ident
-        ,height: 150
-        ,width: 750
+        // ,height: 150
+        ,width: 700
         ,stateful: false
-        ,url: MODx.config.connectors_url+'security/group.php'
-        ,action: 'create'
+        ,url: MODx.config.connector_url
+        ,action: 'security/group/create'
         ,fields: [{
             name: 'parent'
             ,id: 'modx-'+this.ident+'-parent'
@@ -202,6 +216,7 @@ MODx.window.CreateUserGroup = function(config) {
             ,description: MODx.expandHelp ? '' : _('user_group_desc_name')
             ,name: 'name'
             ,id: 'modx-'+this.ident+'-name'
+            ,allowBlank: false
             ,anchor: '100%'
         },{
             xtype: MODx.expandHelp ? 'label' : 'hidden'
@@ -301,7 +316,7 @@ MODx.window.CreateUserGroup = function(config) {
                     },{
                         xtype: 'modx-combo-policy'
                         ,baseParams: {
-                            action: 'getList'
+                            action: 'security/access/policy/getList'
                             ,group: 'Admin'
                             ,combo: '1'
                         }
@@ -310,6 +325,7 @@ MODx.window.CreateUserGroup = function(config) {
                         ,description: MODx.expandHelp ? '' : _('user_group_aw_manager_policy_desc')
                         ,id: this.ident+'-aw-manager-policy'
                         ,anchor: '100%'
+                        ,allowBlank: true
                     },{
                         xtype: MODx.expandHelp ? 'label' : 'hidden'
                         ,forId: this.ident+'-aw-manager-policy'
@@ -347,10 +363,10 @@ MODx.window.AddUserToUserGroup = function(config) {
     Ext.applyIf(config,{
         title: _('user_group_user_add')
         ,id: this.ident
-        ,height: 150
-        ,width: 375
-        ,url: MODx.config.connectors_url+'security/usergroup/user.php'
-        ,action: 'create'
+        // ,height: 150
+        // ,width: 375
+        ,url: MODx.config.connector_url
+        ,action: 'security/group/user/create'
         ,fields: [{
             fieldLabel: _('name')
             ,description: MODx.expandHelp ? '' : _('user_group_user_add_user_desc')

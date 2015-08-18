@@ -22,10 +22,14 @@ class SystemSettingsManagerController extends modManagerController {
     public function loadCustomCssJs() {
         $this->addHtml('<script type="text/javascript">
         // <[!CDATA[
+        Ext.onReady(function() {
+            MODx.add("modx-page-system-settings");
+        });
         MODx.onSiteSettingsRender = "'.$this->onSiteSettingsRender.'";
         // ]]>
         </script>');
         $this->addJavascript($this->modx->getOption('manager_url').'assets/modext/widgets/core/modx.grid.settings.js');
+        $this->addJavascript($this->modx->getOption('manager_url').'assets/modext/widgets/system/modx.grid.system.event.js');
         $this->addJavascript($this->modx->getOption('manager_url').'assets/modext/widgets/system/modx.panel.system.settings.js');
         $this->addJavascript($this->modx->getOption('manager_url').'assets/modext/sections/system/settings.js');
     }
@@ -38,7 +42,7 @@ class SystemSettingsManagerController extends modManagerController {
     public function process(array $scriptProperties = array()) {
         $onSiteSettingsRender = $this->modx->invokeEvent('OnSiteSettingsRender');
         if (is_array($onSiteSettingsRender)) {
-            $this->onSiteSettingsRender = implode("\n",$onSiteSettingsRender);
+            $this->onSiteSettingsRender = implode("\"\n+ \"",$onSiteSettingsRender);
         }
     }
 
@@ -56,7 +60,7 @@ class SystemSettingsManagerController extends modManagerController {
      * @return string
      */
     public function getTemplateFile() {
-        return 'system/settings/index.tpl';
+        return '';
     }
 
     /**
@@ -64,7 +68,7 @@ class SystemSettingsManagerController extends modManagerController {
      * @return array
      */
     public function getLanguageTopics() {
-        return array('setting');
+        return array('setting','events');
     }
 
     /**

@@ -16,20 +16,30 @@ MODx.page.UpdateUser = function(config) {
             ,cancel: 'security/user'
        }
         ,buttons: [{
-            process: 'update', text: _('save'), method: 'remote'
-            ,checkDirty: true
+            process: 'security/user/update'
+            ,text: _('save')
+            ,id: 'modx-abtn-save'
+            ,cls: 'primary-button'
+            ,method: 'remote'
+            // ,checkDirty: true
             ,keys: [{
                 key: MODx.config.keymap_save || 's'
                 ,ctrl: true
             }]
-        },'-',{
-            process: 'cancel', text: _('cancel'), params: {a:'security/user'}
-        },'-',{
+        },{
+            text: _('cancel')
+            ,id: 'modx-abtn-cancel'
+            ,handler: function() {
+                MODx.loadPage('security/user')
+            }
+        },{
             text: _('delete')
+            ,id: 'modx-abtn-delete'
             ,handler: this.removeUser
             ,scope: this
-        },'-',{
+        },{
             text: _('help_ex')
+            ,id: 'modx-abtn-help'
             ,handler: MODx.loadHelpPane
         }]
         ,components: [{
@@ -48,15 +58,15 @@ Ext.extend(MODx.page.UpdateUser,MODx.Component,{
         MODx.msg.confirm({
             title: _('user_remove')
             ,text: _('user_confirm_remove')
-            ,url: MODx.config.connectors_url+'security/user.php'
+            ,url: MODx.config.connector_url
             ,params: {
-                action: 'delete'
+                action: 'security/user/delete'
                 ,id: this.config.user
             }
             ,listeners: {
-            	'success': {fn:function(r) {
-            	    location.href = '?a=security/user';
-            	},scope:this}
+                'success': {fn:function(r) {
+                    MODx.loadPage('security/user');
+                },scope:this}
             }
         });
     }

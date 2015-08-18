@@ -26,6 +26,10 @@ class SystemActionManagerController extends modManagerController {
         $this->addJavascript($mgrUrl.'assets/modext/widgets/system/modx.tree.menu.js');
         $this->addJavascript($mgrUrl.'assets/modext/widgets/system/modx.panel.actions.js');
         $this->addJavascript($mgrUrl.'assets/modext/sections/system/action.js');
+        $this->addHtml("<script>
+            Ext.onReady(function() {
+                MODx.add('modx-page-actions');
+            });</script>");
     }
 
     /**
@@ -49,7 +53,7 @@ class SystemActionManagerController extends modManagerController {
      * @return string
      */
     public function getTemplateFile() {
-        return 'system/action/index.tpl';
+        return '';
     }
 
     /**

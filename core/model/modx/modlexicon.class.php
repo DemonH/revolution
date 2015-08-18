@@ -2,7 +2,7 @@
 /**
  * MODX Revolution
  *
- * Copyright 2006-2012 by MODX, LLC.
+ * Copyright 2006-2015 by MODX, LLC.
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -86,7 +86,9 @@ class modLexicon {
      */
     public function clearCache($path = '') {
         $path = 'lexicon/'.$path;
-        return $this->modx->cacheManager->clearCache(array($path));
+        return $this->modx->cacheManager->refresh(array(
+            'lexicon_topics' => array($path),
+        ));
     }
 
     /**
@@ -346,6 +348,7 @@ class modLexicon {
                 }
             }
         }
+        sort($topics);
         return $topics;
     }
 
@@ -368,6 +371,7 @@ class modLexicon {
                 $languages[] = $language->getFilename();
             }
         }
+        sort($languages);
         return $languages;
     }
 

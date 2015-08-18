@@ -2,7 +2,7 @@
 /**
  * MODX Revolution
  *
- * Copyright 2006-2012 by MODX, LLC.
+ * Copyright 2006-2015 by MODX, LLC.
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -89,10 +89,10 @@ class modRequest {
             $this->checkPublishStatus();
             $this->modx->resourceMethod = $this->getResourceMethod();
             $this->modx->resourceIdentifier = $this->getResourceIdentifier($this->modx->resourceMethod);
-            if ($this->modx->resourceMethod == 'id' && $this->modx->getOption('friendly_urls', null, false) && !$this->modx->getOption('request_method_strict', null, false)) {
-                $uri = array_search($this->modx->resourceIdentifier, $this->modx->aliasMap);
+            if ($this->modx->resourceMethod == 'id' && $this->modx->getOption('friendly_urls', null, false) && $this->modx->getOption('request_method_strict', null, false)) {
+                $uri = $this->modx->context->getResourceURI($this->modx->resourceIdentifier);
                 if (!empty($uri)) {
-                    if ($this->modx->resourceIdentifier == $this->modx->getOption('site_start', null, 1)) {
+                    if ((integer) $this->modx->resourceIdentifier === (integer) $this->modx->getOption('site_start', null, 1)) {
                         $url = $this->modx->getOption('site_url', null, MODX_SITE_URL);
                     } else {
                         $url = $this->modx->getOption('site_url', null, MODX_SITE_URL) . $uri;
@@ -108,8 +108,9 @@ class modRequest {
             $this->modx->resourceIdentifier = $this->_cleanResourceIdentifier($this->modx->resourceIdentifier);
         }
         if ($this->modx->resourceMethod == "alias") {
-            if (isset ($this->modx->aliasMap[$this->modx->resourceIdentifier])) {
-                $this->modx->resourceIdentifier = $this->modx->aliasMap[$this->modx->resourceIdentifier];
+            $found = $this->modx->findResource($this->modx->resourceIdentifier);
+            if ($found) {
+                $this->modx->resourceIdentifier = $found;
                 $this->modx->resourceMethod = 'id';
             } else {
                 $this->modx->sendErrorPage();
@@ -178,7 +179,7 @@ class modRequest {
     public function getResource($method, $identifier, array $options = array()) {
         $resource = null;
         if ($method == 'alias') {
-            $resourceId = $this->modx->aliasMap[$identifier];
+            $resourceId = $this->modx->findResource($identifier);
         } else {
             $resourceId = $identifier;
         }
@@ -200,7 +201,7 @@ class modRequest {
             if ($resource) {
                 $resource->fromArray($cachedResource['resource'], '', true, true, true);
                 $resource->_content = $cachedResource['resource']['_content'];
-                $resource->_isForward = isset($cachedResource['resource']['_isForward']) && !empty($cachedResource['resource']['_isForward']);
+                $resource->_isForward = $isForward;
                 if (isset($cachedResource['contentType'])) {
                     $contentType = $this->modx->newObject('modContentType');
                     $contentType->fromArray($cachedResource['contentType'], '', true, true, true);
@@ -274,7 +275,9 @@ class modRequest {
             } else {
                 return null;
             }
-            $this->modx->invokeEvent('OnLoadWebPageCache');
+            $this->modx->invokeEvent('OnLoadWebPageCache', array(
+                'resource'  => &$resource,
+            ));
         }
         return $resource;
     }
@@ -310,37 +313,36 @@ class modRequest {
      */
     public function _cleanResourceIdentifier($identifier) {
         if (empty ($identifier)) {
-            if ($this->modx->getOption('base_url', null, MODX_BASE_URL) !== $_SERVER['REQUEST_URI']) {
+            if ($this->modx->getOption('base_url', null, MODX_BASE_URL) !== strtok($_SERVER["REQUEST_URI"],'?')) {
                 $this->modx->sendRedirect($this->modx->getOption('site_url', null, MODX_SITE_URL), array('responseCode' => 'HTTP/1.1 301 Moved Permanently'));
             }
             $identifier = $this->modx->getOption('site_start', null, 1);
             $this->modx->resourceMethod = 'id';
         }
-        elseif ($this->modx->getOption('friendly_urls', null, false) && $this->modx->resourceMethod = 'alias') {
+        elseif ($this->modx->getOption('friendly_urls', null, false) && $this->modx->resourceMethod == 'alias') {
             $containerSuffix = trim($this->modx->getOption('container_suffix', null, ''));
-            if (!isset ($this->modx->aliasMap[$identifier])) {
-                if (!empty ($containerSuffix)) {
-                    $suffixLen = strlen($containerSuffix);
-                    $identifierLen = strlen($identifier);
-                    if (substr($identifier, $identifierLen - $suffixLen) === $containerSuffix) {
-                        $identifier = substr($identifier, 0, $identifierLen - $suffixLen);
-                    }
-                    elseif (isset ($this->modx->aliasMap["{$identifier}{$containerSuffix}"])) {
-                        $identifier = "{$identifier}{$containerSuffix}";
-                    }
-                    if (isset ($this->modx->aliasMap[$identifier])) {
-                        $parameters = $this->getParameters();
-                        unset($parameters[$this->modx->getOption('request_param_alias')]);
-                        $url = $this->modx->makeUrl($this->modx->aliasMap[$identifier], '', $parameters, 'full');
-                        $this->modx->sendRedirect($url, array('responseCode' => 'HTTP/1.1 301 Moved Permanently'));
-                    }
-                    $this->modx->resourceMethod = 'alias';
+            $found = $this->modx->findResource($identifier);
+            if ($found === false && !empty ($containerSuffix)) {
+                $suffixLen = strlen($containerSuffix);
+                $identifierLen = strlen($identifier);
+                if (substr($identifier, $identifierLen - $suffixLen) === $containerSuffix) {
+                    $identifier = substr($identifier, 0, $identifierLen - $suffixLen);
+                    $found = $this->modx->findResource($identifier);
+                } else {
+                    $identifier = "{$identifier}{$containerSuffix}";
+                    $found = $this->modx->findResource("{$identifier}{$containerSuffix}");
                 }
-            }
-            elseif ($this->modx->getOption('site_start', null, 1) == $this->modx->aliasMap[$identifier]) {
+                if ($found) {
+                    $parameters = $this->getParameters();
+                    unset($parameters[$this->modx->getOption('request_param_alias')]);
+                    $url = $this->modx->makeUrl($found, $this->modx->context->get('key'), $parameters, 'full');
+                    $this->modx->sendRedirect($url, array('responseCode' => 'HTTP/1.1 301 Moved Permanently'));
+                }
+                $this->modx->resourceMethod = 'alias';
+            } elseif ((integer) $this->modx->getOption('site_start', null, 1) === $found) {
                 $parameters = $this->getParameters();
                 unset($parameters[$this->modx->getOption('request_param_alias')]);
-                $url = $this->modx->makeUrl($this->modx->getOption('site_start', null, 1), '', $parameters, 'full');
+                $url = $this->modx->makeUrl($this->modx->getOption('site_start', null, 1), $this->modx->context->get('key'), $parameters, 'full');
                 $this->modx->sendRedirect($url, array('responseCode' => 'HTTP/1.1 301 Moved Permanently'));
             } else {
                 if ($this->modx->getOption('friendly_urls_strict', null, false)) {
@@ -352,7 +354,7 @@ class modRequest {
                     if ($fullId !== $requestUri && strpos($requestUri, $fullId) !== 0) {
                         $parameters = $this->getParameters();
                         unset($parameters[$this->modx->getOption('request_param_alias')]);
-                        $url = $this->modx->makeUrl($this->modx->aliasMap[$identifier], '', $parameters, 'full');
+                        $url = $this->modx->makeUrl($found, $this->modx->context->get('key'), $parameters, 'full');
                         $this->modx->sendRedirect($url, array('responseCode' => 'HTTP/1.1 301 Moved Permanently'));
                     }
                 }
@@ -407,6 +409,7 @@ class modRequest {
      * <li>topic: the topic to record to (required)</li>
      * <li>register_class: the modRegister class (defaults to modFileRegister)</li>
      * <li>log_level: the logging level (defaults to MODX_LOG_LEVEL_INFO)</li>
+     * <li>clear: set flag to clear register before logging new messages into it  (optional)</li>
      * </ul>
      *
      * @param array $options An array containing all the options required to
@@ -419,7 +422,8 @@ class modRequest {
                 $register = $this->modx->registry->getRegister($options['register'], $register_class);
                 if ($register) {
                     $level = isset($options['log_level']) ? $options['log_level'] : modX::LOG_LEVEL_INFO;
-                    $this->modx->registry->setLogging($register, $options['topic'], $level);
+                    $clear = (!empty($options['clear']) && $options['clear'] !== 'false');
+                    $this->modx->registry->setLogging($register, $options['topic'], $level, $clear);
                 }
             }
         }
@@ -480,7 +484,7 @@ class modRequest {
             xPDO::OPT_CACHE_HANDLER => $this->modx->getOption('cache_auto_publish_handler', null, $this->modx->getOption(xPDO::OPT_CACHE_HANDLER))
         ));
         if ($cacheRefreshTime > 0) {
-            $timeNow= time() + $this->modx->getOption('server_offset_time', null, 0);
+            $timeNow= time();
             if ($cacheRefreshTime <= $timeNow) {
                 $this->modx->cacheManager->refresh();
             }
@@ -506,6 +510,37 @@ class modRequest {
             $key = ($action->get('namespace') == 'core' ? '' : $action->get('namespace').':').$action->get('controller');
             $actionList[$key] = $action->get('id');
         }
+
+        // Also add old core actions for backwards compatibility
+        $oldActions = array('browser', 'context',
+            'context/create', 'context/update', 'context/view',
+            'element', 'element/chunk', 'element/chunk/create', 'element/chunk/update',
+            'element/plugin', 'element/plugin/create', 'element/plugin/update:',
+            'element/propertyset/index', 'element/snippet', 'element/snippet/create',
+            'element/snippet/update', 'element/template', 'element/template/create',
+            'element/template/tvsort', 'element/template/update', 'element/tv',
+            'element/tv/create', 'element/tv/update', 'element/view', 'help',
+            'resource', 'resource/create', 'resource/data', 'resource/empty_recycle_bin',
+            'resource/site_schedule', 'resource/tvs', 'resource/update', 'search', 'security',
+            'security/access/policy/template/update', 'security/access/policy/update',
+            'security/forms', 'security/forms/profile/update', 'security/forms/set/update',
+            'security/login', 'security/message', 'security/permission', 'security/profile',
+            'security/resourcegroup/index', 'security/role', 'security/user', 'security/user/create',
+            'security/user/update', 'security/usergroup/create', 'security/usergroup/update',
+            'source/create', 'source/index', 'source/update', 'system', 'system/action',
+            'system/contenttype', 'system/dashboards', 'system/dashboards/create',
+            'system/dashboards/update', 'system/dashboards/widget/create',
+            'system/dashboards/widget/update', 'system/event', 'system/file', 'system/file/create',
+            'system/file/edit', 'system/import', 'system/import/html', 'system/info',
+            'system/logs/index', 'system/phpinfo', 'system/refresh_site', 'system/settings',
+            'welcome', 'workspaces', 'workspaces/lexicon',
+            'workspaces/namespace', 'workspaces/package/view');
+        if (empty($namespace) || $namespace ==  'core') {
+            foreach ($oldActions as $a) {
+                $actionList[$a] = $a;
+            }
+        }
+
         return $actionList;
     }
 
@@ -578,7 +613,7 @@ class modRequest {
 
     /**
      * Get the true client IP. Returns an array of values:
-     * 
+     *
      * * ip - The real, true client IP
      * * suspected - The suspected IP, if not alike to REMOTE_ADDR
      * * network - The client's network IP

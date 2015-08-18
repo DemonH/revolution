@@ -1,6 +1,6 @@
 /**
  * Generates the Element Tree
- * 
+ *
  * @class MODx.tree.Element
  * @extends MODx.tree.Tree
  * @param {Object} config An object of options.
@@ -11,62 +11,58 @@ MODx.tree.Element = function(config) {
     Ext.applyIf(config,{
         rootVisible: false
         ,enableDD: !Ext.isEmpty(MODx.config.enable_dragdrop) ? true : false
-        ,ddGroup: 'modx-treedrop-dd'
+        ,ddGroup: 'modx-treedrop-elements-dd'
         ,title: ''
-        ,url: MODx.config.connectors_url+'element/index.php'
-        ,useDefaultToolbar: true
+        ,url: MODx.config.connector_url
+        ,action: 'element/getnodes'
+        ,sortAction: 'element/sort'
+        ,useDefaultToolbar: false
         ,baseParams: {
             currentElement: MODx.request.id || 0
             ,currentAction: MODx.request.a || 0
         }
         ,tbar: [{
-            icon: MODx.config.manager_url+'templates/default/images/restyle/icons/template.png'
-            ,cls: 'x-btn-icon'
+            cls: 'tree-new-template'
             ,tooltip: {text: _('new')+' '+_('template')}
             ,handler: function() {
-                this.redirect('index.php?a=element/template/create');
+                this.redirect('?a=element/template/create');
             }
             ,scope: this
             ,hidden: MODx.perm.new_template ? false : true
         },{
-            icon: MODx.config.manager_url+'templates/default/images/restyle/icons/tv.png'
-            ,cls: 'x-btn-icon'
+            cls: 'tree-new-tv'
             ,tooltip: {text: _('new')+' '+_('tv')}
             ,handler: function() {
-                this.redirect('index.php?a=element/tv/create');
+                this.redirect('?a=element/tv/create');
             }
             ,scope: this
             ,hidden: MODx.perm.new_tv ? false : true
         },{
-            icon: MODx.config.manager_url+'templates/default/images/restyle/icons/chunk.png'
-            ,cls: 'x-btn-icon'
+            cls: 'tree-new-chunk'
             ,tooltip: {text: _('new')+' '+_('chunk')}
             ,handler: function() {
-                this.redirect('index.php?a=element/chunk/create');
+                this.redirect('?a=element/chunk/create');
             }
             ,scope: this
             ,hidden: MODx.perm.new_chunk ? false : true
         },{
-            icon: MODx.config.manager_url+'templates/default/images/restyle/icons/snippet.png'
-            ,cls: 'x-btn-icon'
+            cls: 'tree-new-snippet'
             ,tooltip: {text: _('new')+' '+_('snippet')}
             ,handler: function() {
-                this.redirect('index.php?a=element/snippet/create');
+                this.redirect('?a=element/snippet/create');
             }
             ,scope: this
             ,hidden: MODx.perm.new_snippet ? false : true
         },{
-            icon: MODx.config.manager_url+'templates/default/images/restyle/icons/plugin.png'
-            ,cls: 'x-btn-icon'
+            cls: 'tree-new-plugin'
             ,tooltip: {text: _('new')+' '+_('plugin')}
             ,handler: function() {
-                this.redirect('index.php?a=element/plugin/create');
+                this.redirect('?a=element/plugin/create');
             }
             ,scope: this
             ,hidden: MODx.perm.new_plugin ? false : true
         },{
-            icon: MODx.config.manager_url+'templates/default/images/restyle/icons/folder.png'
-            ,cls: 'x-btn-icon'
+            cls: 'tree-new-category'
             ,tooltip: {text: _('new_category')}
             ,handler: function() {
                 this.createCategory(null,{target: this.getEl()});
@@ -122,15 +118,15 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
         });
         w.show(e.target);
     }
-		
+
     ,removeCategory: function(itm,e) {
         var id = this.cm.activeNode.attributes.data.id;
         MODx.msg.confirm({
             title: _('warning')
             ,text: _('category_confirm_delete')
-            ,url: MODx.config.connectors_url+'element/category.php'
+            ,url: MODx.config.connector_url
             ,params: {
-                action: 'remove'
+                action: 'element/category/remove'
                 ,id: id
             }
             ,listeners: {
@@ -140,7 +136,7 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
             }
         });
     }
-	    
+
     ,duplicateElement: function(itm,e,id,type) {
         var r = {
             id: id
@@ -157,7 +153,7 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
         });
         w.show(e.target);
     }
-	
+
     ,removeElement: function(itm,e) {
         var id = this.cm.activeNode.id.substr(2);
         var oar = id.split('_');
@@ -167,9 +163,9 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
                 type: oar[0]
                 ,name: this.cm.activeNode.attributes.name
             })
-            ,url: MODx.config.connectors_url+'element/'+oar[0]+'.php'
+            ,url: MODx.config.connector_url
             ,params: {
-                action: 'remove'
+                action: 'element/'+oar[0]+'/remove'
                 ,id: oar[2]
             }
             ,listeners: {
@@ -177,7 +173,7 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
                     this.cm.activeNode.remove();
                     /* if editing the element being removed */
                     if (MODx.request.a == 'element/'+oar[0]+'/update' && MODx.request.id == oar[2]) {
-                        location.href = 'index.php?a=welcome';
+                        MODx.loadPage('welcome');
                     }
                 },scope:this}
             }
@@ -188,9 +184,9 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
         var id = this.cm.activeNode.id.substr(2);
         var oar = id.split('_');
         MODx.Ajax.request({
-            url: MODx.config.connectors_url+'element/plugin.php'
+            url: MODx.config.connector_url
             ,params: {
-                action: 'activate'
+                action: 'element/plugin/activate'
                 ,id: oar[2]
             }
             ,listeners: {
@@ -205,9 +201,9 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
         var id = this.cm.activeNode.id.substr(2);
         var oar = id.split('_');
         MODx.Ajax.request({
-            url: MODx.config.connectors_url+'element/plugin.php'
+            url: MODx.config.connector_url
             ,params: {
-                action: 'deactivate'
+                action: 'element/plugin/deactivate'
                 ,id: oar[2]
             }
             ,listeners: {
@@ -226,51 +222,64 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
             xtype: 'modx-window-quick-create-'+type
             ,record: r
             ,listeners: {
-                'success':{fn:function() {this.refreshNode(this.cm.activeNode.id);},scope:this}
-                ,'hide':{fn:function() {this.destroy();}}
+                success: {
+                    fn: function() {
+                        this.refreshNode(this.cm.activeNode.id, true);
+                    }
+                    ,scope: this
+                }
+                ,hide: {
+                    fn: function() {
+                        this.destroy();
+                    }
+                }
             }
         });
         w.setValues(r);
         w.show(e.target);
     }
-    
+
     ,quickUpdate: function(itm,e,type) {
         MODx.Ajax.request({
-            url: MODx.config.connectors_url+'element/'+type+'.php'
+            url: MODx.config.connector_url
             ,params: {
-                action: 'get'
+                action: 'element/'+type+'/get'
                 ,id: this.cm.activeNode.attributes.pk
             }
             ,listeners: {
                 'success': {fn:function(r) {
+                    var nameField = (type == 'template') ? 'templatename' : 'name';
                     var w = MODx.load({
                         xtype: 'modx-window-quick-update-'+type
                         ,record: r.object
                         ,listeners: {
                             'success':{fn:function(r) {
                                 this.refreshNode(this.cm.activeNode.id);
+                                var newTitle = '<span dir="ltr">' + r.f.findField(nameField).getValue() + ' (' + w.record.id + ')</span>';
+                                w.setTitle(w.title.replace(/<span.*\/span>/, newTitle));
                             },scope:this}
                             ,'hide':{fn:function() {this.destroy();}}
                         }
                     });
+                    w.title += ': <span dir="ltr">' + w.record[nameField] + ' ('+ w.record.id + ')</span>';
                     w.setValues(r.object);
                     w.show(e.target);
                 },scope:this}
             }
         });
     }
-	
+
     ,_createElement: function(itm,e,t) {
         var id = this.cm.activeNode.id.substr(2);
         var oar = id.split('_');
         var type = oar[0] == 'type' ? oar[1] : oar[0];
         var cat_id = oar[0] == 'type' ? 0 : (oar[1] == 'category' ? oar[2] : oar[3]);
         var a = 'element/'+type+'/create';
-        this.redirect('index.php?a='+a+'&category='+cat_id);
+        this.redirect('?a='+a+'&category='+cat_id);
         this.cm.hide();
         return false;
     }
-    
+
     ,afterSort: function(o) {
         var tn = o.event.target.attributes;
         if (tn.type == 'category') {
@@ -283,7 +292,7 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
             }
         }
     }
-		
+
     ,_handleDrop: function(e) {
         var target = e.target;
         if (e.point == 'above' || e.point == 'below') {return false;}
@@ -294,7 +303,7 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
 
         return target.getDepth() > 0;
     }
-    
+
     ,isCorrectType: function(dropNode,targetNode) {
         var r = false;
         /* types must be the same */
@@ -302,8 +311,8 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
             /* do not allow anything to be dropped on an element */
             if(!(targetNode.parentNode &&
                 ((dropNode.attributes.cls == 'folder'
-                    && targetNode.attributes.cls == 'folder'
-                    && dropNode.parentNode.id == targetNode.parentNode.id
+                && targetNode.attributes.cls == 'folder'
+                && dropNode.parentNode.id == targetNode.parentNode.id
                 ) || targetNode.attributes.cls == 'file'))) {
                 r = true;
             }
@@ -318,7 +327,6 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
      * @param {Ext.EventObject} e The event object run.
      */
     ,_showContextMenu: function(n,e) {
-        n.select();
         this.cm.activeNode = n;
         this.cm.removeAll();
         if (n.attributes.menu && n.attributes.menu.items) {
@@ -376,21 +384,22 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
         var a = n.attributes;
         var ui = n.getUI();
         var m = [];
-        
+
         m.push({
             text: '<b>'+a.text+'</b>'
             ,handler: function() { return false; }
             ,header: true
         });
         m.push('-');
-        
+
         if (ui.hasClass('pedit')) {
             m.push({
                 text: _('edit_'+a.type)
                 ,type: a.type
                 ,pk: a.pk
                 ,handler: function(itm,e) {
-                    location.href = 'index.php?a=element/'+itm.type+'/update&id='+itm.pk;
+                    MODx.loadPage('element/'+itm.type+'/update',
+                        'id='+itm.pk);
                 }
             });
             m.push({
@@ -490,7 +499,7 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
         }
         return m;
     }
-    
+
     ,_getRootMenu: function(n) {
         var a = n.attributes;
         var ui = n.getUI();
@@ -517,94 +526,18 @@ Ext.extend(MODx.tree.Element,MODx.tree.Tree,{
                 ,handler: this.createCategory
             });
         }
-        
+
         return m;
+    }
+
+    ,handleCreateClick: function(node){
+        this.cm.activeNode = node;
+        var type = this.cm.activeNode.id.substr(2).split('_');
+        if (type[0] != 'category') {
+            this._createElement(null, null, null);
+        } else {
+            this.createCategory(null, {target: this});
+        }
     }
 });
 Ext.reg('modx-tree-element',MODx.tree.Element);
-
-
-/** 
- * Generates the Duplicate Element window
- * 
- * @class MODx.window.DuplicateElement
- * @extends MODx.Window
- * @param {Object} config An object of options.
- * @xtype modx-window-element-duplicate
- */
-MODx.window.DuplicateElement = function(config) {
-    config = config || {};
-    this.ident = config.ident || 'dupeel-'+Ext.id();
-    var flds = [{
-        xtype: 'hidden'
-        ,name: 'id'
-        ,id: 'modx-'+this.ident+'-id'
-    },{
-        xtype: 'textfield'
-        ,fieldLabel: _('element_name_new')
-        ,name: config.record.type == 'template' ? 'templatename' : 'name'
-        ,id: 'modx-'+this.ident+'-name'
-        ,anchor: '90%'
-    }];
-    if (config.record.type == 'tv') {
-        flds.push({
-            xtype: 'xcheckbox'
-            ,fieldLabel: _('element_duplicate_values')
-            ,labelSeparator: ''
-            ,name: 'duplicateValues'
-            ,id: 'modx-'+this.ident+'-duplicate-values'
-            ,anchor: '95%'
-            ,inputValue: 1
-            ,checked: false
-        });
-    }
-    Ext.applyIf(config,{
-        title: _('element_duplicate')
-        ,url: MODx.config.connectors_url+'element/'+config.record.type+'.php'
-        ,action: 'duplicate'
-        ,fields: flds
-        ,labelWidth: 150
-    });
-    MODx.window.DuplicateElement.superclass.constructor.call(this,config);
-};
-Ext.extend(MODx.window.DuplicateElement,MODx.Window);
-Ext.reg('modx-window-element-duplicate',MODx.window.DuplicateElement);
-
-
-
-/** 
- * Generates the Rename Category window.
- *  
- * @class MODx.window.RenameCategory
- * @extends MODx.Window
- * @param {Object} config An object of options.
- * @xtype modx-window-category-rename
- */
-MODx.window.RenameCategory = function(config) {
-    config = config || {};
-    this.ident = config.ident || 'rencat-'+Ext.id();
-    Ext.applyIf(config,{
-        title: _('category_rename')
-        ,height: 150
-        ,width: 350
-        ,url: MODx.config.connectors_url+'element/category.php'
-        ,action: 'update'
-        ,fields: [{
-            xtype: 'hidden'
-            ,name: 'id'
-            ,id: 'modx-'+this.ident+'-id'
-            ,value: config.record.id
-        },{
-            xtype: 'textfield'
-            ,fieldLabel: _('name')
-            ,name: 'category'
-            ,id: 'modx-'+this.ident+'-category'
-            ,width: 150
-            ,value: config.record.category
-            ,anchor: '90%'
-        }]
-    });
-    MODx.window.RenameCategory.superclass.constructor.call(this,config);
-};
-Ext.extend(MODx.window.RenameCategory,MODx.Window);
-Ext.reg('modx-window-category-rename',MODx.window.RenameCategory);

@@ -102,8 +102,8 @@ class SecurityLoginManagerController extends modManagerController {
      * @return void
      */
     public function handleForgotLoginHash() {
-        if (isset($this->scriptProperties['modahsh'])) {
-            $this->scriptProperties['modahsh'] = $this->modx->sanitizeString($this->scriptProperties['modahsh']);
+        if (isset($_GET['modahsh'])) {
+            $this->scriptProperties['modahsh'] = $this->modx->sanitizeString($_GET['modahsh']);
             $this->setPlaceholder('modahsh',$this->scriptProperties['modahsh']);
         }
     }
@@ -119,7 +119,7 @@ class SecurityLoginManagerController extends modManagerController {
             $this->setPlaceholder('returnUrl',$returnUrl);
         }
     }
-    
+
     /**
      * Check to see if there's an active installation in process; if so, notify the user.
      * @return void
@@ -138,7 +138,7 @@ class SecurityLoginManagerController extends modManagerController {
 
     /**
      * Handle and sanitize any POST actions that come through
-     * 
+     *
      * @return void
      */
     public function handlePost() {
@@ -167,12 +167,12 @@ class SecurityLoginManagerController extends modManagerController {
      */
     public function handleLogin() {
         $validated = true;
-        
+
         /** @var modUser $user */
         $user = $this->modx->getObject('modUser',array(
             'username' => $this->scriptProperties['username'],
         ));
-        
+
         /* first if there's an activation hash, process that */
         if ($user) {
             if (array_key_exists('modahsh', $this->scriptProperties) && !empty($this->scriptProperties['modahsh'])) {
@@ -201,7 +201,7 @@ class SecurityLoginManagerController extends modManagerController {
 
     /**
      * Handles the action when a user forgets their login
-     * 
+     *
      * @return void
      */
     public function handleForgotLogin() {
@@ -210,6 +210,7 @@ class SecurityLoginManagerController extends modManagerController {
         $c->innerJoin('modUserProfile','Profile');
         $c->where(array(
             'modUser.username' => $this->scriptProperties['username_reset'],
+            'OR:Profile.email:=' => $this->scriptProperties['username_reset'],
         ));
         /** @var modUser $user */
         $user = $this->modx->getObject('modUser',$c);
@@ -235,11 +236,13 @@ class SecurityLoginManagerController extends modManagerController {
             $placeholders['manager_url'] = $this->modx->getOption('manager_url');
             $placeholders['hash'] = $activationHash;
             $placeholders['password'] = $newPassword;
-            foreach ($placeholders as $k => $v) {
-                if (is_string($v)) {
-                    $message = str_replace('[[+'.$k.']]',$v,$message);
-                }
-            }
+            // Store previous placeholders
+            $ph = $this->modx->placeholders;
+            // now set those useful for modParser
+            $this->modx->setPlaceholders($placeholders);
+            $this->modx->getParser()->processElementTags('', $message, false, false);
+            // Then restore previous placeholders to prevent any breakage
+            $this->modx->placeholders = $ph;
 
             $this->modx->getService('mail', 'mail.modPHPMailer');
             $this->modx->mail->set(modMail::MAIL_BODY, $message);
